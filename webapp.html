@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Geography Guessing Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 1rem;
+    }
+
+    .question {
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+    }
+
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .choices button {
+      padding: 0.6rem 1rem;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      font-size: 1rem;
+    }
+
+    .choices button:hover {
+      background-color: #0056b3;
+    }
+
+    .result, .score, .highscore, .live-score {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    .live-score {
+      font-size: 1.1rem;
+      color: #333;
+    }
+
+    #playAgain {
+      margin-top: 1.5rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      background: #28a745;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #playAgain:hover {
+      background: #218838;
+    }
+
+    .correct {
+      animation: flashGreen 0.5s;
+    }
+
+    .incorrect {
+      animation: shakeRed 0.5s;
+    }
+
+    @keyframes flashGreen {
+      0% { background-color: #28a745; color: white; }
+      100% { background-color: #007bff; color: white; }
+    }
+
+    @keyframes shakeRed {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-10px); }
+      40%, 80% { transform: translateX(10px); }
+      100% { background-color: #dc3545; color: white; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌍 Geography Guessing Game</h1>
+    <div class="live-score" id="liveScore">Score: 0 / 0</div>
+    <div id="game">
+      <div id="questionNumber"></div>
+      <div class="question" id="question"></div>
+      <div class="choices" id="choices"></div>
+    </div>
+    <div class="result" id="result"></div>
+    <div class="score" id="score"></div>
+    <div class="highscore" id="highscore"></div>
+    <button id="playAgain" style="display:none;">Play Again</button>
+  </div>
+
+  <script>
+    const usQuestions = [
+      { q: "What is the capital of California?", a: "Sacramento", choices: ["Los Angeles", "San Diego", "Sacramento", "San Francisco"] },
+      { q: "Which river runs through the Grand Canyon?", a: "Colorado River", choices: ["Mississippi River", "Colorado River", "Rio Grande", "Missouri River"] },
+      { q: "Which U.S. state is furthest north?", a: "Alaska", choices: ["Washington", "North Dakota", "Maine", "Alaska"] },
+      { q: "Which state has the most coastline?", a: "Alaska", choices: ["California", "Florida", "Hawaii", "Alaska"] },
+      { q: "Which U.S. state borders 8 others and has no ocean access?", a: "Colorado", choices: ["Nevada", "Colorado", "Idaho", "Tennessee"] },
+      { q: "Which U.S. state is home to Mount Rushmore?", a: "South Dakota", choices: ["Montana", "South Dakota", "Wyoming", "North Dakota"] },
+      { q: "Which U.S. city is known as the Mile-High City?", a: "Denver", choices: ["Salt Lake City", "Denver", "Boise", "Albuquerque"] },
+    ];
+
+    const worldQuestions = [
+      { q: "What is the largest desert in the world?", a: "Antarctic Desert", choices: ["Sahara", "Gobi", "Antarctic Desert", "Arabian Desert"] },
+      { q: "What is the capital of Mongolia?", a: "Ulaanbaatar", choices: ["Astana", "Ulaanbaatar", "Tashkent", "Kathmandu"] },
+      { q: "Which country has the most time zones?", a: "France", choices: ["Russia", "USA", "China", "France"] },
+      { q: "Which island nation lies south of India?", a: "Sri Lanka", choices: ["Maldives", "Sri Lanka", "Thailand", "Singapore"] },
+      { q: "Mount Kilimanjaro is in which country?", a: "Tanzania", choices: ["Kenya", "Uganda", "Tanzania", "Ethiopia"] },
+      { q: "Which European country has the most volcanoes?", a: "Iceland", choices: ["Italy", "Iceland", "Greece", "Norway"] },
+      { q: "What is the capital of New Zealand?", a: "Wellington", choices: ["Auckland", "Wellington", "Christchurch", "Dunedin"] },
+    ];
+
+    let questions = [];
+    let currentQuestion = 0;
+    let correctAnswers = 0;
+
+    const questionEl = document.getElementById('question');
+    const choicesEl = document.getElementById('choices');
+    const resultEl = document.getElementById('result');
+    const scoreEl = document.getElementById('score');
+    const highscoreEl = document.getElementById('highscore');
+    const questionNumberEl = document.getElementById('questionNumber');
+    const playAgainBtn = document.getElementById('playAgain');
+    const liveScoreEl = document.getElementById('liveScore');
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function startGame() {
+      // Pick random 5 from each and shuffle the final 10
+      const selectedUS = shuffle([...usQuestions]).slice(0, 5);
+      const selectedWorld = shuffle([...worldQuestions]).slice(0, 5);
+      questions = shuffle([...selectedUS, ...selectedWorld]);
+      currentQuestion = 0;
+      correctAnswers = 0;
+      document.getElementById('game').style.display = 'block';
+      resultEl.textContent = '';
+      scoreEl.textContent = '';
+      playAgainBtn.style.display = 'none';
+      loadQuestion();
+    }
+
+    function updateLiveScore() {
+      liveScoreEl.textContent = `Score: ${correctAnswers} / ${currentQuestion}`;
+    }
+
+    function loadQuestion() {
+      updateLiveScore();
+      const q = questions[currentQuestion];
+      questionNumberEl.textContent = `Question ${currentQuestion + 1} of 10`;
+      questionEl.textContent = q.q;
+      choicesEl.innerHTML = '';
+
+      shuffle([...q.choices]).forEach(choice => {
+        const btn = document.createElement('button');
+        btn.textContent = choice;
+        btn.onclick = () => handleAnswer(choice, btn);
+        choicesEl.appendChild(btn);
+      });
+    }
+
+    function handleAnswer(selected, button) {
+      const correct = questions[currentQuestion].a;
+      const allButtons = document.querySelectorAll('.choices button');
+
+      allButtons.forEach(btn => btn.disabled = true);
+
+      if (selected === correct) {
+        button.classList.add('correct');
+        correctAnswers++;
+      } else {
+        button.classList.add('incorrect');
+        setTimeout(() => {
+          button.classList.remove('incorrect');
+        }, 500);
+      }
+
+      currentQuestion++;
+      updateLiveScore();
+
+      setTimeout(() => {
+        if (currentQuestion < questions.length) {
+          loadQuestion();
+        } else {
+          endGame();
+        }
+      }, 700);
+    }
+
+    function endGame() {
+      document.getElementById('game').style.display = 'none';
+      const win = correctAnswers >= 7;
+      resultEl.textContent = win ? "🎉 You Win!" : "😞 Better Luck Next Time!";
+      scoreEl.textContent = `You got ${correctAnswers} out of 10 correct.`;
+
+      const prevHighScore = localStorage.getItem('geoHighScore') || 0;
+      if (correctAnswers > prevHighScore) {
+        localStorage.setItem('geoHighScore', correctAnswers);
+      }
+
+      highscoreEl.textContent = `All-Time High Score: ${localStorage.getItem('geoHighScore')}`;
+      playAgainBtn.style.display = 'inline-block';
+    }
+
+    playAgainBtn.onclick = startGame;
+
+    // Start on load
+    startGame();
+  </script>
+  <a href= "index.html">Resume Page</a>
+  <br>
+  <a href= "scratch.html">Minecraft Page</a>
+</body>
+</html>
